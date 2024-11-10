@@ -15,6 +15,7 @@ export const getSignatures = async () => {
       if (tx) {
         const { transaction: { message } } = tx;
         console.log(`now in signature ${index}`);
+        // depends program & instruction : here signer is [0] after testing for my own pubkey
         const x = message.accountKeys[0].toString();
         signers.push(x);
         console.log(x);
