@@ -8,3 +8,4 @@ useful to airdrop devnet users
 pnpm i
 pnpm snapshot
 ```
+result gets written to `signers.json` (available in current repo)
