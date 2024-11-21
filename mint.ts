@@ -101,7 +101,6 @@ const umi = createUmi("https://api.devnet.solana.com").use(
 // Payer secret key for signing transactions
 const payerSecretKey = new Uint8Array(payerWallet);
 
-// Create keypair and signer
 let keypair = umi.eddsa.createKeypairFromSecretKey(payerSecretKey);
 const payer = Keypair.fromSecretKey(payerSecretKey);
 console.log("Payer Public Key:", payer.publicKey.toBase58());
@@ -109,24 +108,15 @@ console.log("Payer Public Key:", payer.publicKey.toBase58());
 const myKeypairSigner = createSignerFromKeypair(umi, keypair);
 umi.use(signerIdentity(myKeypairSigner));
 
-// Create a mint signer
 const mint = generateSigner(umi);
 
-const wallet = Keypair.fromSecretKey(new Uint8Array(payerWallet));
-
-// Main function to create a fungible token
 async function main() {
-  // Switch Umi instance to SOON Devnet by adding necessary programs
   // await umiSwitchToSoonDevnet(umi);
 
   console.log(`found ${addresses.length} addresses`);
+  console.log(`adding signer to airdrop list`);
 
-  // Create the fungible token (e.g., BONK)
-  // const txResponse = await mintV1(umi, {
-  //   mint: publicKey('6idLocKUQfSGMdjgqSdcAeY6vJedyx8RPZ4pC3HfSGzQ'),
-  //   tokenStandard: TokenStandard.Fungible,
-  //   amount: new BN(100 * 1 * 10 ** 6)
-  // }).sendAndConfirm(umi);
+  addresses.unshift(myKeypairSigner.publicKey.toString());
 
   const txResponse = await createFungible(umi, {
     mint,
@@ -140,27 +130,20 @@ async function main() {
   const txHash = base58.deserialize(txResponse.signature);
   console.log("Transaction hash:", txHash);
 
-  const connection = new Connection(clusterApiUrl('devnet'));
-
   addresses.forEach(async (address, index) => {
     setTimeout(async () => {
-      const signerAta = await getOrCreateAssociatedTokenAccount(
-        connection,
-        wallet,
-        new PublicKey(mint.publicKey.toString()),
-        new PublicKey(address),
-      );
-
-      let tx = await mintTo(
-        connection,
-        wallet,
-        new PublicKey(mint.publicKey.toString()),
-        signerAta.address,
-        wallet.publicKey,
-        100 * 1 * 10 ** 6
-      );
-      console.log(`Success for ${address} :\nhttps://explorer.solana.com/tx/${tx}?cluster=devnet`);
-
+      const txResponse = await mintV1(umi, {
+        mint: mint.publicKey,
+        tokenStandard: TokenStandard.Fungible,
+        amount: new BN(100 * 1 * 10 ** 6),
+        tokenOwner: publicKey(address)
+      }).sendAndConfirm(umi);
+      const txHash = base58.deserialize(txResponse.signature);
+      console.log("Transaction hash:", txHash);
+      console.log(`Success for ${address}`);
+      if (index == addresses.length - 1) {
+        console.log(`Done processing ${addresses.length} addresses !`)
+      }
     }, index * 1000);
   });
 
